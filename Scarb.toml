@@ -1,8 +1,8 @@
 [package]
 name = "faraday"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2024_07"
-description = "Offline phone-to-phone payments on Starknet powered by Stwo Chihuahua pocket proofs and EF PSE Rate-Limiting Nullifiers."
+description = "Self-custodial offline cash on Starknet: Poseidon + Stwo M31 pocket vouchers, EF PSE RLNv2 double-spend slashing, and post-quantum duress shelter."
 license = "Apache-2.0"
 repository = "https://github.com/starknet-innovation/faraday"
 

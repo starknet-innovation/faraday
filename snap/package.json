@@ -1,0 +1,24 @@
+{
+  "name": "@starknet-innovation/faraday-snap",
+  "version": "0.2.0",
+  "private": true,
+  "description": "Farcaster / Network State Snap courier relay and RLNv2 double-spend watchtower for Faraday offline cash on Starknet.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "scripts": {
+    "dev": "SKIP_JFS_VERIFICATION=true tsx watch src/server.ts",
+    "test": "node --experimental-strip-types src/rln.test.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@farcaster/snap": "^2.0.1",
+    "@farcaster/snap-hono": "^2.0.1",
+    "@hono/node-server": "^2.1.5",
+    "hono": "^4.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.5.2",
+    "tsx": "^4.0.0",
+    "typescript": "^5.7.0"
+  }
+}

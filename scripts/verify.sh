@@ -4,7 +4,7 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
-echo "==> [1/2] Scarb format & compilation check"
+echo "==> [1/3] Scarb format & compilation check"
 if command -v scarb >/dev/null 2>&1; then
   scarb fmt --check
   scarb build
@@ -13,7 +13,7 @@ else
 fi
 
 UC_BIN="${UC_BIN:-$(command -v uc || true)}"
-echo "==> [2/2] Ultra Cairo (uc) lint, unit tests, audit, & formal verification"
+echo "==> [2/3] Ultra Cairo (uc) lint, unit tests, audit, & formal verification"
 if [[ -n "$UC_BIN" && -x "$UC_BIN" ]]; then
   "$UC_BIN" lint
   "$UC_BIN" test
@@ -21,4 +21,11 @@ if [[ -n "$UC_BIN" && -x "$UC_BIN" ]]; then
   "$UC_BIN" prove --wide-domain --fail-on findings
 else
   echo "    (uc not found in PATH; install https://github.com/omarespejel/uc or set UC_BIN=/path/to/uc)"
+fi
+
+echo "==> [3/3] Farcaster / Network State Snap RLNv2 Watchtower tests"
+if command -v node >/dev/null 2>&1; then
+  node --experimental-strip-types snap/src/rln.test.ts
+else
+  echo "    (node not found in PATH; skipping snap test)"
 fi
