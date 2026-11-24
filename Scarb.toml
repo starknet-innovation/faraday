@@ -1,0 +1,14 @@
+[package]
+name = "faraday"
+version = "0.1.0"
+edition = "2024_07"
+description = "Offline phone-to-phone payments on Starknet powered by Stwo Chihuahua pocket proofs and EF PSE Rate-Limiting Nullifiers."
+license = "Apache-2.0"
+repository = "https://github.com/starknet-innovation/faraday"
+
+[dependencies]
+starknet = ">=2.18.0"
+
+[[target.starknet-contract]]
+sierra = true
+casm = true

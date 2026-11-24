@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Faraday — Offline Pocket Cash Simulator (Stwo Chihuahua + EF PSE RLN)</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #060911;
+      --panel: #0f172a;
+      --panel-inner: #080d18;
+      --border: #1e293b;
+      --text: #f1f5f9;
+      --muted: #94a3b8;
+      --emerald: #34d399;
+      --emerald-dim: rgba(52, 211, 153, 0.14);
+      --amber: #fbbf24;
+      --amber-dim: rgba(251, 191, 36, 0.15);
+      --rose: #fb7185;
+      --rose-dim: rgba(251, 113, 133, 0.15);
+      --sky: #38bdf8;
+      --sky-dim: rgba(56, 189, 248, 0.15);
+      --purple: #c084fc;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      --sans: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 18px;
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+      line-height: 1.45;
+    }
+    .wrap { max-width: 1060px; margin: 0 auto; display: flex; flex-direction: column; gap: 14px; }
+    .topbar {
+      display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px;
+      padding: 11px 16px; border-radius: 16px; background: var(--panel); border: 1px solid var(--border);
+    }
+    .brand { display: flex; align-items: center; gap: 10px; font-family: var(--mono); font-size: 13px; font-weight: 700; }
+    .dot { width: 9px; height: 9px; border-radius: 999px; background: var(--emerald); box-shadow: 0 0 10px var(--emerald); }
+    .pill {
+      font-family: var(--mono); font-size: 11px; padding: 3px 9px; border-radius: 999px;
+      background: var(--emerald-dim); color: var(--emerald); border: 1px solid rgba(52, 211, 153, 0.35);
+    }
+    .pill.sky { background: var(--sky-dim); color: var(--sky); border-color: rgba(56, 189, 248, 0.35); }
+    .pill.amber { background: var(--amber-dim); color: var(--amber); border-color: rgba(251, 191, 36, 0.35); }
+    .pill.rose { background: var(--rose-dim); color: var(--rose); border-color: rgba(251, 113, 133, 0.4); }
+    .grid { display: grid; grid-template-columns: 340px 1fr; gap: 16px; align-items: start; }
+    @media (max-width: 860px) { .grid { grid-template-columns: 1fr; } .phone { margin: 0 auto; } }
+
+    .phone {
+      width: 340px; border-radius: 36px; padding: 15px; background: var(--panel-inner);
+      border: 3px solid #334155; box-shadow: 0 22px 45px rgba(0, 0, 0, 0.55);
+    }
+    .statusbar {
+      display: flex; align-items: center; justify-content: space-between;
+      font-family: var(--mono); font-size: 10px; color: var(--muted); padding: 2px 6px 10px;
+    }
+    .island {
+      padding: 2px 10px; border-radius: 999px; background: #000; border: 1px solid var(--border);
+      display: flex; align-items: center; gap: 5px; font-size: 9px;
+    }
+    .led { width: 6px; height: 6px; border-radius: 999px; background: var(--emerald); }
+    .note-card {
+      border-radius: 18px; padding: 14px;
+      background: linear-gradient(140deg, rgba(6, 78, 59, 0.65), #0f172a 60%, #020617);
+      border: 1px solid rgba(52, 211, 153, 0.32);
+    }
+    .row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+    .bal { font-family: var(--mono); font-size: 30px; font-weight: 800; letter-spacing: -0.02em; margin: 6px 0 4px; }
+    .submeta { font-family: var(--mono); font-size: 10px; color: var(--muted); }
+    .seg { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; margin-top: 10px; }
+    .seg4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; margin-top: 7px; }
+    button {
+      cursor: pointer; font-family: var(--mono); border-radius: 9px; border: 1px solid var(--border);
+      background: #111827; color: var(--text); padding: 7px 8px; font-size: 11px; transition: 0.14s ease;
+    }
+    button:hover { filter: brightness(1.12); }
+    button.active {
+      background: var(--emerald-dim); border-color: rgba(52, 211, 153, 0.55); color: var(--emerald); font-weight: 700;
+    }
+    .box { margin-top: 10px; padding: 10px; border-radius: 12px; background: var(--panel); border: 1px solid var(--border); }
+    .btn-pay {
+      width: 100%; margin-top: 10px; padding: 11px 12px; border-radius: 12px; border: none;
+      background: var(--emerald); color: #022c22; font-weight: 800; font-size: 12px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .btn-duress {
+      width: 100%; margin-top: 7px; padding: 9px 12px; border-radius: 12px;
+      background: var(--amber-dim); border: 1px solid rgba(251, 191, 36, 0.45); color: var(--amber);
+      font-weight: 700; font-size: 11px; display: flex; align-items: center; justify-content: space-between;
+    }
+    .btn-fork {
+      background: var(--rose-dim); border-color: rgba(251, 113, 133, 0.45); color: var(--rose); font-weight: 700; font-size: 10px;
+    }
+    .phone-foot {
+      margin-top: 12px; padding-top: 9px; border-top: 1px solid var(--border);
+      display: flex; justify-content: space-between; font-family: var(--mono); font-size: 10px; color: var(--muted);
+    }
+
+    .right-col { display: flex; flex-direction: column; gap: 14px; }
+    .card { padding: 15px; border-radius: 18px; background: var(--panel); border: 1px solid var(--border); }
+    .eyebrow { font-family: var(--mono); font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--emerald); font-weight: 700; }
+    .eyebrow.sky { color: var(--sky); }
+    h3 { margin: 3px 0 0; font-size: 15px; }
+    .wire {
+      margin-top: 11px; padding: 11px; border-radius: 12px; background: #04070e; border: 1px solid var(--border);
+      font-family: var(--mono); font-size: 11px; display: flex; flex-direction: column; gap: 4px; overflow-x: auto;
+    }
+    .wire div { white-space: nowrap; color: #cbd5e1; }
+    .btn-relay {
+      background: var(--sky); color: #082f49; border: none; font-weight: 800; padding: 8px 13px; white-space: nowrap;
+    }
+    .pools { display: grid; grid-template-columns: repeat(5, 1fr); gap: 7px; margin-top: 11px; text-align: center; font-family: var(--mono); }
+    @media (max-width: 560px) { .pools { grid-template-columns: repeat(2, 1fr); } }
+    .pool { padding: 9px 6px; border-radius: 12px; background: #04070e; border: 1px solid var(--border); }
+    .pool-lbl { font-size: 9px; color: var(--muted); }
+    .pool-val { font-size: 14px; font-weight: 800; margin-top: 3px; }
+    .log {
+      margin-top: 11px; padding: 9px 12px; border-radius: 11px; background: #04070e; border: 1px solid var(--border);
+      font-family: var(--mono); font-size: 11px; color: #cbd5e1;
+    }
+    code { font-family: var(--mono); color: #e2e8f0; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="topbar">
+      <div class="brand">
+        <span class="dot"></span>
+        <span>FARADAY // CASH THAT WORKS IN AIRPLANE MODE</span>
+        <span class="pill">Stwo Chihuahua &bull; EF PSE RLN &bull; 96B Frame</span>
+      </div>
+      <div class="row">
+        <span id="vault-pill" class="pill sky">Starknet Vault: FaradayVault (5-Pool Solvency)</span>
+        <button onclick="resetAll()">Reset State</button>
+      </div>
+    </div>
+
+    <div class="grid">
+      <!-- LEFT: Offline Phone Pocket Prover -->
+      <div class="phone">
+        <div class="statusbar">
+          <span style="color: var(--amber); font-weight: 700;">AIRPLANE &bull; 0 B/s</span>
+          <div class="island">
+            <span id="enclave-led" class="led"></span>
+            <span>ENCLAVE</span>
+          </div>
+          <span style="color: var(--emerald);">OFF-GRID READY</span>
+        </div>
+
+        <div class="note-card">
+          <div class="row submeta" style="color: var(--emerald);">
+            <span>CARRIER NOTE #0x101</span>
+            <span id="phone-seq" class="pill" style="padding: 1px 7px; font-size: 10px;">seq = 0</span>
+          </div>
+          <div class="bal">
+            <span id="phone-bal">$1,000</span>
+            <span id="phone-asset" style="font-size: 13px; color: var(--emerald);">USDC</span>
+          </div>
+          <div class="row submeta">
+            <span>RLN Bond: <strong id="phone-bond" style="color: var(--text);">$1,000</strong></span>
+            <span>PQ Safe-House: <strong id="phone-pq" style="color: var(--sky);">$0</strong></span>
+          </div>
+        </div>
+
+        <div class="seg">
+          <button id="tr-nfc" class="active" onclick="selectTransport('nfc', 'NFC ISO-DEP (96 B)')">NFC 96B</button>
+          <button id="tr-qr" onclick="selectTransport('qr', 'Optical QR (96 B)')">Optical QR</button>
+          <button id="tr-lora" onclick="selectTransport('lora', 'LoRa Mesh (96 B)')">LoRa Mesh</button>
+        </div>
+
+        <div class="box">
+          <div class="row" style="font-size: 11px;">
+            <span style="color: var(--muted);">Tap Amount (+$1 Relay Tip)</span>
+            <strong id="spend-display" style="font-family: var(--mono); color: var(--emerald);">$15 USDC</strong>
+          </div>
+          <div class="seg4">
+            <button onclick="selectSpend(5)">$5</button>
+            <button onclick="selectSpend(15)">$15</button>
+            <button onclick="selectSpend(50)">$50</button>
+            <button onclick="selectSpend(200)">$200</button>
+          </div>
+        </div>
+
+        <button class="btn-pay" onclick="triggerPhoneAction('normal')">
+          <span>Tap to Pay (Normal Biometric)</span>
+          <span style="font-size: 10px; opacity: 0.85;">73 ms Stwo</span>
+        </button>
+
+        <button class="btn-duress" onclick="triggerPhoneAction('duress')">
+          <span>Panic Finger (Duress Mode)</span>
+          <span style="font-size: 10px;">$25 Decoy + PQ Lock</span>
+        </button>
+
+        <div class="seg" style="grid-template-columns: 1fr 1fr; margin-top: 7px;">
+          <button class="btn-fork" onclick="triggerPhoneAction('fork')">Cheat: Double-Spend seq</button>
+          <button onclick="resetAll()" style="font-size: 10px;">Mint Fresh Carrier</button>
+        </div>
+
+        <div class="phone-foot">
+          <span>RAM: <strong style="color: var(--emerald);">28.0 MB</strong></span>
+          <span>Pedersen: <strong style="color: var(--emerald);">4 / 512</strong></span>
+          <span>Zero Signal</span>
+        </div>
+      </div>
+
+      <!-- RIGHT: Merchant Offline POS + Starknet 5-Pool Settlement -->
+      <div class="right-col">
+        <div class="card">
+          <div class="row">
+            <div>
+              <div class="eyebrow">Step 1 &bull; Merchant Offline Verifier (Zero Internet)</div>
+              <h3 id="pos-headline">Waiting for NFC / QR / LoRa tap...</h3>
+            </div>
+            <span id="pos-pill" class="pill">VERIFIER READY</span>
+          </div>
+
+          <div class="wire">
+            <div class="row" style="color: var(--muted);">
+              <span>TRANSPORT: <strong id="w-transport" style="color: var(--emerald);">NFC ISO-DEP (96 B)</strong></span>
+              <span>LOCAL VERIFY: <strong style="color: var(--emerald);">3.8 ms</strong></span>
+            </div>
+            <div>packed_seq_and_spend : <span id="w-packed" style="color: var(--sky);">0x0000000000e4e1c0 (spend=$15, seq=0)</span></div>
+            <div>spend_nullifier      : <span id="w-nullifier" style="color: var(--amber);">0x04a91f...e81b (pedersen(a_0, 1))</span></div>
+            <div>shamir_share_y       : <span id="w-shamir" style="color: var(--emerald);">y = s + a_0 * x_merchant (mod P)</span></div>
+            <div>enclave_mode_tag     : <span id="w-enclave" style="color: var(--purple);">0x02c88d...mode0 (Normal Biometric)</span></div>
+          </div>
+
+          <div class="row" style="margin-top: 11px;">
+            <span id="pos-explanation" style="font-size: 12px; color: var(--muted);">
+              Tap <strong>Tap to Pay</strong> on the phone to create a 96-byte Stwo Chihuahua proof offline, then settle whenever either phone reconnects.
+            </span>
+            <button class="btn-relay" onclick="relayPendingToStarknet()">Settle on Starknet &rarr;</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="row">
+            <div>
+              <div class="eyebrow sky">Step 2 &bull; On-Chain FaradayVault (Starknet Settlement)</div>
+              <div style="font-size: 12px; color: var(--muted); margin-top: 2px;">
+                <code>total_vault_assets == carrier + bond + merchant + pq_recovery + relay_fee</code>
+              </div>
+            </div>
+            <span id="inv-badge" class="pill">$2,000 == $2,000</span>
+          </div>
+
+          <div class="pools">
+            <div class="pool">
+              <div class="pool-lbl">CARRIER</div>
+              <div id="v-carrier" class="pool-val">$1,000</div>
+            </div>
+            <div class="pool">
+              <div class="pool-lbl">RLN BOND</div>
+              <div id="v-bond" class="pool-val" style="color: var(--amber);">$1,000</div>
+            </div>
+            <div class="pool">
+              <div class="pool-lbl">MERCHANT</div>
+              <div id="v-merchant" class="pool-val" style="color: var(--emerald);">$0</div>
+            </div>
+            <div class="pool">
+              <div class="pool-lbl">PQ SAFE</div>
+              <div id="v-pq" class="pool-val" style="color: var(--sky);">$0</div>
+            </div>
+            <div class="pool">
+              <div class="pool-lbl">RELAY FEE</div>
+              <div id="v-fee" class="pool-val" style="color: var(--purple);">$0</div>
+            </div>
+          </div>
+
+          <div id="vault-log" class="log">
+            [starknet] Carrier note #0x101 minted: $1,000 USDC spending balance + $1,000 RLN anti-fraud bond ($2,000 total).
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const S = {
+      phoneBal: 1000,
+      phoneBond: 1000,
+      phonePq: 0,
+      seq: 0,
+      spend: 15,
+      transport: 'NFC ISO-DEP (96 B)',
+      pendingAction: null,
+      vault: { carrier: 1000, bond: 1000, merchant: 0, pq: 0, fee: 0, total: 2000 }
+    };
+
+    function fmt(n) { return '$' + n.toLocaleString(); }
+
+    function selectTransport(key, label) {
+      S.transport = label;
+      document.getElementById('w-transport').textContent = label;
+      ['nfc', 'qr', 'lora'].forEach(k => {
+        document.getElementById('tr-' + k).className = (k === key) ? 'active' : '';
+      });
+    }
+
+    function selectSpend(v) {
+      S.spend = v;
+      document.getElementById('spend-display').textContent = '$' + v + ' USDC';
+    }
+
+    function renderVault(msg) {
+      document.getElementById('v-carrier').textContent = fmt(S.vault.carrier);
+      document.getElementById('v-bond').textContent = fmt(S.vault.bond);
+      document.getElementById('v-merchant').textContent = fmt(S.vault.merchant);
+      document.getElementById('v-pq').textContent = fmt(S.vault.pq);
+      document.getElementById('v-fee').textContent = fmt(S.vault.fee);
+      const sum = S.vault.carrier + S.vault.bond + S.vault.merchant + S.vault.pq + S.vault.fee;
+      document.getElementById('inv-badge').textContent = fmt(S.vault.total) + ' == ' + fmt(sum);
+      document.getElementById('vault-log').textContent = msg;
+    }
+
+    function resetAll() {
+      S.phoneBal = 1000;
+      S.phoneBond = 1000;
+      S.phonePq = 0;
+      S.seq = 0;
+      S.pendingAction = null;
+      S.vault = { carrier: 1000, bond: 1000, merchant: 0, pq: 0, fee: 0, total: 2000 };
+      document.getElementById('phone-bal').textContent = '$1,000';
+      document.getElementById('phone-bond').textContent = '$1,000';
+      document.getElementById('phone-pq').textContent = '$0';
+      document.getElementById('phone-seq').textContent = 'seq = 0';
+      document.getElementById('enclave-led').style.background = 'var(--emerald)';
+      document.getElementById('pos-headline').textContent = 'Waiting for NFC / QR / LoRa tap...';
+      document.getElementById('pos-pill').textContent = 'VERIFIER READY';
+      document.getElementById('pos-pill').className = 'pill';
+      document.getElementById('pos-explanation').textContent =
+        'Tap "Tap to Pay" on the phone to create a 96-byte Stwo Chihuahua proof offline, then settle whenever either phone reconnects.';
+      renderVault('[starknet] Carrier note #0x101 minted: $1,000 USDC spending balance + $1,000 RLN anti-fraud bond ($2,000 total).');
+    }
+
+    function triggerPhoneAction(kind) {
+      if (kind === 'normal') {
+        const debit = S.spend + 1;
+        if (S.phoneBal < debit) {
+          document.getElementById('pos-explanation').textContent = 'Insufficient offline carrier balance on phone. Click Reset State.';
+          return;
+        }
+        const curSeq = S.seq;
+        S.phoneBal -= debit;
+        S.seq += 1;
+        const packed = BigInt(S.spend) * 1000000n + BigInt(curSeq);
+        const nullifier = '0x04a9' + (curSeq * 7919 + 1041).toString(16) + '...e81b';
+        const shamirY = 77777 + (4201 + curSeq * 313) * (17 + curSeq * 11);
+
+        document.getElementById('phone-bal').textContent = fmt(S.phoneBal);
+        document.getElementById('phone-seq').textContent = 'seq = ' + S.seq;
+        document.getElementById('enclave-led').style.background = 'var(--emerald)';
+        document.getElementById('w-packed').textContent = '0x' + packed.toString(16) + ' (spend=$' + S.spend + ', seq=' + curSeq + ')';
+        document.getElementById('w-nullifier').textContent = nullifier + ' (fresh hop nullifier)';
+        document.getElementById('w-shamir').textContent = 'y = ' + shamirY + ' (1 point on line -> secret s hidden)';
+        document.getElementById('w-enclave').textContent = '0x02c88d...mode0 (Normal Biometric)';
+        document.getElementById('pos-headline').textContent = 'Offline Payment #' + curSeq + ' Verified ($' + S.spend + ' + $1 Tip)';
+        document.getElementById('pos-pill').textContent = 'RECEIPT VALID';
+        document.getElementById('pos-pill').className = 'pill';
+        document.getElementById('pos-explanation').textContent =
+          'Merchant verified the 96-byte Stwo Chihuahua proof in 3.8 ms without internet. Click "Settle on Starknet" to post when back online.';
+        S.pendingAction = { type: 'normal', spend: S.spend, tip: 1, seq: curSeq };
+      } else if (kind === 'duress') {
+        if (S.phoneBal <= 0) {
+          document.getElementById('pos-explanation').textContent = 'Real balance is already locked inside the Post-Quantum Safe-House.';
+          return;
+        }
+        const decoy = Math.min(25, S.phoneBal);
+        const shelter = S.phoneBal - decoy;
+        S.phoneBal = 0;
+        S.phonePq += shelter;
+        const packed = BigInt(decoy) * 1000000n + BigInt(S.seq);
+
+        document.getElementById('phone-bal').textContent = '$0 (DECOY)';
+        document.getElementById('phone-pq').textContent = fmt(S.phonePq);
+        document.getElementById('enclave-led').style.background = 'var(--amber)';
+        document.getElementById('w-packed').textContent = '0x' + packed.toString(16) + ' (decoy=$' + decoy + ', seq=' + S.seq + ')';
+        document.getElementById('w-enclave').textContent = '0x09f44e...mode1 (Duress Enclave Tag -> PQ Shelter)';
+        document.getElementById('pos-headline').textContent = 'Duress Mode Armed: $' + decoy + ' Decoy + $' + shelter + ' PQ Safe-House';
+        document.getElementById('pos-pill').textContent = 'DURESS SWEEP';
+        document.getElementById('pos-pill').className = 'pill amber';
+        document.getElementById('pos-explanation').textContent =
+          'Coercer sees a $' + decoy + ' wallet payment; click "Settle on Starknet" to run trigger_duress_pq_shelter and lock $' + shelter + ' away.';
+        S.pendingAction = { type: 'duress', decoy, shelter };
+      } else if (kind === 'fork') {
+        const reusedSeq = S.seq > 0 ? S.seq - 1 : 0;
+        const s = 77777;
+        const a1 = 4201 + reusedSeq * 313;
+        const x1 = 17, x2 = 43;
+        const y1 = s + a1 * x1;
+        const y2 = s + a1 * x2;
+        const recSlope = (y2 - y1) / (x2 - x1);
+        const recSecret = y1 - recSlope * x1;
+        const victimComp = Math.min(400, S.vault.bond - 50);
+
+        document.getElementById('enclave-led').style.background = 'var(--rose)';
+        document.getElementById('w-nullifier').textContent = '0x04a9' + (reusedSeq * 7919 + 1041).toString(16) + '...e81b (COLLISION at seq=' + reusedSeq + ')';
+        document.getElementById('w-shamir').textContent = 'y1=' + y1 + ', y2=' + y2 + ' => a1=' + recSlope + ' => s=' + recSecret + ' RECOVERED';
+        document.getElementById('pos-headline').textContent = 'Double-Spend Caught! RLN Extracted Secret s = ' + recSecret;
+        document.getElementById('pos-pill').textContent = 'FORK SLASHABLE';
+        document.getElementById('pos-pill').className = 'pill rose';
+        document.getElementById('pos-explanation').textContent =
+          'Two offline taps at seq=' + reusedSeq + ' revealed two points on the RLN Shamir line. Click "Settle on Starknet" to slash the bond and reimburse the merchant.';
+        S.pendingAction = { type: 'fork', seq: reusedSeq, victim: victimComp, bounty: 50 };
+      }
+    }
+
+    function relayPendingToStarknet() {
+      if (!S.pendingAction) triggerPhoneAction('normal');
+      const act = S.pendingAction;
+      if (!act) return;
+      S.pendingAction = null;
+
+      if (act.type === 'normal') {
+        const debit = act.spend + act.tip;
+        if (S.vault.carrier >= debit) {
+          S.vault.carrier -= debit;
+          S.vault.merchant += act.spend;
+          S.vault.fee += act.tip;
+          renderVault('[starknet] settle_offline_voucher_via_mesh(seq=' + act.seq + '): -$' + debit + ' carrier -> +$' + act.spend + ' merchant, +$' + act.tip + ' relay_fee.');
+        }
+      } else if (act.type === 'duress') {
+        const total = act.decoy + act.shelter;
+        if (S.vault.carrier >= total) {
+          S.vault.carrier -= total;
+          S.vault.merchant += act.decoy;
+          S.vault.pq += act.shelter;
+          renderVault('[starknet] trigger_duress_pq_shelter: -$' + total + ' carrier -> +$' + act.decoy + ' decoy recipient, +$' + act.shelter + ' locked in pq_recovery_pool.');
+        }
+      } else if (act.type === 'fork') {
+        const total = act.victim + act.bounty;
+        if (S.vault.bond >= total && act.victim > 0) {
+          S.vault.bond -= total;
+          S.phoneBond = S.vault.bond;
+          document.getElementById('phone-bond').textContent = fmt(S.phoneBond) + ' (SLASHED)';
+          S.vault.merchant += act.victim;
+          S.vault.fee += act.bounty;
+          renderVault('[starknet] slash_offline_fork(note=0x101, seq=' + act.seq + '): -$' + total + ' bond -> +$' + act.victim + ' defrauded merchant, +$' + act.bounty + ' relayer bounty.');
+        } else {
+          renderVault('[starknet] Note #0x101 bond has already been slashed.');
+        }
+      }
+    }
+  </script>
+</body>
+</html>

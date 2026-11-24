@@ -1,0 +1,11 @@
+target/
+.uc/
+.qodo/
+Scarb.lock
+uc.lock
+*.sarif
+prove_report.json
+.DS_Store
+*.swp
+.env
+.env.*
